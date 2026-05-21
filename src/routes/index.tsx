@@ -8,7 +8,7 @@ import {
   getForwardAnalytics,
   disconnectMyUserbots,
 } from "@/lib/app.functions";
-import { Zap, Hash, ChevronDown, Activity, Target, Gauge, LogOut, Loader2 } from "lucide-react";
+import { Zap, Hash, ChevronDown, Activity, Target, Gauge, LogOut, Loader2, ShieldAlert, RefreshCw } from "lucide-react";
 import { LiveExchangeDashboard } from "@/components/LiveExchangeDashboard";
 
 export const Route = createFileRoute("/")({ component: Index });
@@ -39,10 +39,7 @@ function Index() {
   if (error || !session) {
     return (
       <Shell>
-        <div className="glass-panel mt-10 rounded-2xl p-6 text-center">
-          <h2 className="font-display text-lg font-bold neon-text-purple">SESSION ERROR</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{error ?? "Unable to load your Telegram session."}</p>
-        </div>
+        <InitDataErrorScreen error={error} />
       </Shell>
     );
   }
@@ -271,6 +268,45 @@ function StatTile({ icon: Icon, label, value, accent }: { icon: React.ComponentT
       <Icon className={`mb-1 h-4 w-4 ${isCyan ? "text-[var(--neon-cyan)]" : "text-[var(--neon-purple)]"}`} />
       <div className={`font-display text-xl font-black ${isCyan ? "neon-text-cyan" : "neon-text-purple"}`}>{value}</div>
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+export function InitDataErrorScreen({ error }: { error: string | null }) {
+  const reason =
+    error === "No Telegram session"
+      ? "Mini App was opened outside Telegram. Launch it from the official Telegram bot link."
+      : error?.includes("Invalid Telegram signature")
+        ? "Telegram signature check failed. Your session may be tampered with or expired."
+        : error?.includes("TELEGRAM_BOT_TOKEN")
+          ? "Server is missing TELEGRAM_BOT_TOKEN. Contact the operator."
+          : "Unable to verify your Telegram session.";
+  return (
+    <div className="mt-10 flex flex-col items-center text-center animate-float-up">
+      <div
+        className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-red-500/60 bg-red-500/10"
+        style={{ boxShadow: "0 0 32px rgba(239,68,68,0.45)" }}
+      >
+        <ShieldAlert className="h-10 w-10 text-red-400" />
+      </div>
+      <h1
+        className="font-display text-2xl font-black uppercase tracking-[0.25em] text-red-400"
+        style={{ textShadow: "0 0 12px rgba(239,68,68,0.7)" }}
+      >
+        Verification Failed
+      </h1>
+      <p className="mt-3 max-w-xs text-xs text-muted-foreground">{reason}</p>
+      {error && (
+        <code className="mt-3 block rounded border border-red-500/30 bg-red-500/5 px-2 py-1 font-mono text-[10px] text-red-300">
+          {error}
+        </code>
+      )}
+      <button
+        onClick={() => window.location.reload()}
+        className="btn-neon mt-5 flex items-center gap-2 rounded-lg px-5 py-2 font-display text-xs font-bold uppercase tracking-widest"
+      >
+        <RefreshCw className="h-3.5 w-3.5" /> Retry Verification
+      </button>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Shell, PageHeader } from "@/components/Shell";
-import { Link2, Check, X, Trash2, Eye, EyeOff, Shield, Users } from "lucide-react";
+import { Link2, Check, X, Trash2, Eye, EyeOff, Shield, Users, Loader2 } from "lucide-react";
+import { useSession } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/links")({ component: LinksPage });
 
@@ -26,7 +27,11 @@ const TG_RE = /^https?:\/\/t\.me\/[A-Za-z0-9_+\-]{3,}$/;
 function LinksPage() {
   const [links, setLinks] = useState<PublicLink[]>(initial);
   const [input, setInput] = useState("");
+  const { session } = useSession();
+  const isAdmin = session?.isAdmin ?? false;
   const [admin, setAdmin] = useState(true);
+  const [pending, setPending] = useState<Record<string, "hide" | "delete" | undefined>>({});
+  const [toast, setToast] = useState<string | null>(null);
 
   const isValid = useMemo(() => TG_RE.test(input.trim()), [input]);
 
@@ -40,9 +45,39 @@ function LinksPage() {
     setInput("");
   };
 
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 1800);
+  };
+
+  const toggleHide = (id: string) => {
+    setPending((p) => ({ ...p, [id]: "hide" }));
+    setLinks((ls) => ls.map((x) => (x.id === id ? { ...x, hidden: !x.hidden } : x)));
+    setTimeout(() => {
+      setPending((p) => ({ ...p, [id]: undefined }));
+      showToast("Visibility updated");
+    }, 450);
+  };
+
+  const deleteLink = (id: string) => {
+    if (!confirm("Delete this link permanently?")) return;
+    setPending((p) => ({ ...p, [id]: "delete" }));
+    setTimeout(() => {
+      setLinks((ls) => ls.filter((x) => x.id !== id));
+      setPending((p) => ({ ...p, [id]: undefined }));
+      showToast("Link removed");
+    }, 450);
+  };
+
   return (
     <Shell>
       <PageHeader title="Public Links" subtitle="Submit & discover Telegram channels" accent="cyan" />
+
+      {toast && (
+        <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg border border-[var(--neon-cyan)] bg-[rgba(13,14,18,0.95)] px-4 py-2 font-display text-xs font-bold uppercase tracking-widest text-[var(--neon-cyan)] animate-float-up" style={{ boxShadow: "0 0 16px rgba(0,240,255,0.4)" }}>
+          ✓ {toast}
+        </div>
+      )}
 
       {/* Submit */}
       <div className="glass-panel mb-4 rounded-2xl p-4 animate-float-up">
@@ -66,9 +101,11 @@ function LinksPage() {
       </div>
 
       {/* Admin toggle */}
-      <button onClick={() => setAdmin((a) => !a)} className="mb-3 flex items-center gap-2 rounded-lg border border-[rgba(157,0,255,0.3)] bg-[rgba(157,0,255,0.06)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-[#e9c3ff]">
-        <Shield className="h-3.5 w-3.5" /> Admin Mode: {admin ? "ON" : "OFF"}
-      </button>
+      {isAdmin && (
+        <button onClick={() => setAdmin((a) => !a)} className="mb-3 flex items-center gap-2 rounded-lg border border-[rgba(157,0,255,0.3)] bg-[rgba(157,0,255,0.06)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-[#e9c3ff]">
+          <Shield className="h-3.5 w-3.5" /> Admin Mode: {admin ? "ON" : "OFF"}
+        </button>
+      )}
 
       {/* Feed */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -87,15 +124,15 @@ function LinksPage() {
               </div>
             </div>
             <a href={l.url} target="_blank" rel="noreferrer" className="block truncate font-mono text-[11px] text-muted-foreground hover:text-[var(--neon-cyan)]">{l.url}</a>
-            {admin && (
+            {isAdmin && admin && (
               <div className="mt-2 flex gap-1.5">
-                <button onClick={() => setLinks((ls) => ls.map(x => x.id === l.id ? { ...x, hidden: !x.hidden } : x))}
-                  className="flex flex-1 items-center justify-center gap-1 rounded border border-border bg-[rgba(255,255,255,0.03)] py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-[var(--neon-cyan)] hover:text-[var(--neon-cyan)]">
-                  {l.hidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} {l.hidden ? "Show" : "Hide"}
+                <button onClick={() => toggleHide(l.id)} disabled={!!pending[l.id]}
+                  className="flex flex-1 items-center justify-center gap-1 rounded border border-border bg-[rgba(255,255,255,0.03)] py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:border-[var(--neon-cyan)] hover:text-[var(--neon-cyan)] disabled:opacity-50">
+                  {pending[l.id] === "hide" ? <Loader2 className="h-3 w-3 animate-spin" /> : l.hidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} {l.hidden ? "Show" : "Hide"}
                 </button>
-                <button onClick={() => setLinks((ls) => ls.filter(x => x.id !== l.id))}
-                  className="flex flex-1 items-center justify-center gap-1 rounded border border-red-500/40 bg-red-500/10 py-1 text-[10px] uppercase tracking-wider text-red-300 hover:bg-red-500/20">
-                  <Trash2 className="h-3 w-3" /> Delete
+                <button onClick={() => deleteLink(l.id)} disabled={!!pending[l.id]}
+                  className="flex flex-1 items-center justify-center gap-1 rounded border border-red-500/40 bg-red-500/10 py-1 text-[10px] uppercase tracking-wider text-red-300 hover:bg-red-500/20 disabled:opacity-50">
+                  {pending[l.id] === "delete" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
                 </button>
               </div>
             )}

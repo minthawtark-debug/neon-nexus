@@ -1,27 +1,67 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Shell, PageHeader } from "@/components/Shell";
 import { Info, ExternalLink, ChevronRight, Check, Loader2, Phone, KeyRound, Lock, Hash } from "lucide-react";
 
 export const Route = createFileRoute("/create")({ component: CreatePage });
 
 const STEPS = ["API Keys", "Phone", "OTP", "2FA"] as const;
+const LS_KEY = "v3.create-wizard.v1";
+
+interface WizardState {
+  step: number;
+  api: { id: string; hash: string };
+  phone: { cc: string; number: string };
+  otp: string;
+  pw: string;
+}
+
+const DEFAULT_STATE: WizardState = {
+  step: 0,
+  api: { id: "", hash: "" },
+  phone: { cc: "+1", number: "" },
+  otp: "",
+  pw: "",
+};
+
+function loadState(): WizardState {
+  if (typeof window === "undefined") return DEFAULT_STATE;
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return DEFAULT_STATE;
+    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_STATE;
+  }
+}
 
 function CreatePage() {
-  const [step, setStep] = useState(0);
+  const initial = loadState();
+  const [step, setStep] = useState(initial.step);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [api, setApi] = useState({ id: "", hash: "" });
-  const [phone, setPhone] = useState({ cc: "+1", number: "" });
-  const [otp, setOtp] = useState("");
-  const [pw, setPw] = useState("");
+  const [api, setApi] = useState(initial.api);
+  const [phone, setPhone] = useState(initial.phone);
+  const [otp, setOtp] = useState(initial.otp);
+  const [pw, setPw] = useState(initial.pw);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        LS_KEY,
+        JSON.stringify({ step, api, phone, otp, pw }),
+      );
+    } catch {}
+  }, [step, api, phone, otp, pw]);
 
   const next = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      if (step === STEPS.length - 1) setDone(true);
-      else setStep((s) => s + 1);
+      if (step === STEPS.length - 1) {
+        setDone(true);
+        try { localStorage.removeItem(LS_KEY); } catch {}
+      } else setStep((s) => s + 1);
     }, 900);
   };
 
@@ -63,7 +103,10 @@ function CreatePage() {
           </div>
           <h3 className="font-display text-xl font-bold neon-text-cyan">Userbot Online</h3>
           <p className="mt-1 text-sm text-muted-foreground">Session established. Ready to forward.</p>
-          <button onClick={() => { setDone(false); setStep(0); }} className="btn-neon-purple mt-5 rounded-lg px-6 py-2 text-sm font-bold uppercase tracking-widest">
+          <button onClick={() => {
+            setDone(false); setStep(0);
+            setApi({ id: "", hash: "" }); setPhone({ cc: "+1", number: "" }); setOtp(""); setPw("");
+          }} className="btn-neon-purple mt-5 rounded-lg px-6 py-2 text-sm font-bold uppercase tracking-widest">
             Add Another
           </button>
         </div>

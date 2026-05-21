@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Shell, PageHeader } from "@/components/Shell";
 import { Users, Send, Bot, Power, Trash2, Activity, ShieldAlert, Loader2 } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
+import { InitDataErrorScreen } from "./index";
 import {
   adminGetOverview,
   adminToggleUserbot,
@@ -25,7 +26,15 @@ function AdminPage() {
     );
   }
 
-  if (error || !session || !session.isAdmin) {
+  if (error) {
+    return (
+      <Shell>
+        <InitDataErrorScreen error={error} />
+      </Shell>
+    );
+  }
+
+  if (!session || !session.isAdmin) {
     return (
       <Shell>
         <div className="mt-10 flex flex-col items-center text-center animate-float-up">
