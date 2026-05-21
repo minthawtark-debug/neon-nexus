@@ -11,7 +11,7 @@ interface Product {
   category: "premium" | "gaming" | "software";
   price: number;
   stock: number;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }
 
 const seed: Product[] = [
