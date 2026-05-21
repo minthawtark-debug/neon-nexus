@@ -13,26 +13,33 @@ declare global {
       WebApp?: {
         ready: () => void;
         expand: () => void;
+        initData?: string;
         initDataUnsafe?: { user?: TelegramUser };
         colorScheme?: "light" | "dark";
         setHeaderColor?: (c: string) => void;
         setBackgroundColor?: (c: string) => void;
+        close?: () => void;
       };
     };
   }
 }
 
-export function getTelegramUser(): TelegramUser {
-  if (typeof window !== "undefined") {
-    const tg = window.Telegram?.WebApp;
-    if (tg?.initDataUnsafe?.user) return tg.initDataUnsafe.user;
-  }
-  return {
-    id: 7421052901,
-    username: "cyber_v3",
-    first_name: "Neo",
-    last_name: "X",
+/**
+ * Returns raw initData (signed by Telegram) for server-side verification.
+ * In a non-Telegram preview, returns a JSON debug payload that the server
+ * will accept ONLY when TELEGRAM_BOT_TOKEN is unset.
+ */
+export function getInitData(): string {
+  if (typeof window === "undefined") return "";
+  const tg = window.Telegram?.WebApp;
+  if (tg?.initData && tg.initData.length > 0) return tg.initData;
+  // Dev fallback: try unsafe user, else anonymous preview identity.
+  const u = tg?.initDataUnsafe?.user ?? {
+    id: 0,
+    username: "preview_user",
+    first_name: "Preview",
   };
+  return JSON.stringify(u);
 }
 
 export function initTelegram() {
