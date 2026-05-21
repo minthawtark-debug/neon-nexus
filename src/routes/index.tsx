@@ -10,9 +10,10 @@ export const Route = createFileRoute("/")({ component: Index });
 
 function Index() {
   const user = getTelegramUser();
-  const [channels, setChannels] = useState("https://t.me/v3network_official");
-  const [groups, setGroups] = useState("https://t.me/v3network_chat");
+  const [link, setLink] = useState("");
+  const [linkType, setLinkType] = useState<"Channel" | "Group">("Channel");
   const [saved, setSaved] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const active = true;
 
   const handleSave = () => {
