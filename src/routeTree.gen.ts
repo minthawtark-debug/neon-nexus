@@ -13,6 +13,7 @@ import { Route as StoreRouteImport } from './routes/store'
 import { Route as LinksRouteImport } from './routes/links'
 import { Route as ForwardRouteImport } from './routes/forward'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
 const StoreRoute = StoreRouteImport.update({
@@ -35,6 +36,11 @@ const CreateRoute = CreateRouteImport.update({
   path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,6 +49,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
   '/links': typeof LinksRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
   '/links': typeof LinksRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
   '/links': typeof LinksRoute
@@ -65,14 +74,15 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/create' | '/forward' | '/links' | '/store'
+  fullPaths: '/' | '/admin' | '/create' | '/forward' | '/links' | '/store'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/forward' | '/links' | '/store'
-  id: '__root__' | '/' | '/create' | '/forward' | '/links' | '/store'
+  to: '/' | '/admin' | '/create' | '/forward' | '/links' | '/store'
+  id: '__root__' | '/' | '/admin' | '/create' | '/forward' | '/links' | '/store'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   CreateRoute: typeof CreateRoute
   ForwardRoute: typeof ForwardRoute
   LinksRoute: typeof LinksRoute
@@ -109,6 +119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -121,6 +138,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   CreateRoute: CreateRoute,
   ForwardRoute: ForwardRoute,
   LinksRoute: LinksRoute,
@@ -129,3 +147,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
