@@ -14,16 +14,194 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      forward_events: {
+        Row: {
+          created_at: string
+          id: string
+          status: Database["public"]["Enums"]["forward_status"]
+          target_id: string | null
+          userbot_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status: Database["public"]["Enums"]["forward_status"]
+          target_id?: string | null
+          userbot_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["forward_status"]
+          target_id?: string | null
+          userbot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forward_events_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "forward_targets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forward_events_userbot_id_fkey"
+            columns: ["userbot_id"]
+            isOneToOne: false
+            referencedRelation: "userbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forward_targets: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          target_link: string
+          target_type: Database["public"]["Enums"]["target_type"]
+          userbot_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          target_link: string
+          target_type: Database["public"]["Enums"]["target_type"]
+          userbot_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          target_link?: string
+          target_type?: Database["public"]["Enums"]["target_type"]
+          userbot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forward_targets_userbot_id_fkey"
+            columns: ["userbot_id"]
+            isOneToOne: false
+            referencedRelation: "userbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          first_name: string | null
+          last_name: string | null
+          photo_url: string | null
+          telegram_id: number
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          first_name?: string | null
+          last_name?: string | null
+          photo_url?: string | null
+          telegram_id: number
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          first_name?: string | null
+          last_name?: string | null
+          photo_url?: string | null
+          telegram_id?: number
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          telegram_id: number
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          telegram_id: number
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          telegram_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_telegram_id_fkey"
+            columns: ["telegram_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["telegram_id"]
+          },
+        ]
+      }
+      userbots: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          owner_telegram_id: number
+          phone: string | null
+          session_string: string | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          owner_telegram_id: number
+          phone?: string | null
+          session_string?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          owner_telegram_id?: number
+          phone?: string | null
+          session_string?: string | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "userbots_owner_telegram_id_fkey"
+            columns: ["owner_telegram_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["telegram_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _telegram_id: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      forward_status: "success" | "failed" | "skipped"
+      target_type: "channel" | "group"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +328,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      forward_status: ["success", "failed", "skipped"],
+      target_type: ["channel", "group"],
+    },
   },
 } as const
