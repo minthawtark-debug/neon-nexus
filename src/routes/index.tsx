@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
 import { getTelegramUser } from "@/lib/telegram";
-import { Zap, Radio, Hash, ChevronDown } from "lucide-react";
-import { LiveExchangeDashboard, FieldInput } from "@/components/LiveExchangeDashboard";
+import { Zap, Hash, ChevronDown } from "lucide-react";
+import { LiveExchangeDashboard } from "@/components/LiveExchangeDashboard";
 
 export const Route = createFileRoute("/")({ component: Index });
 
