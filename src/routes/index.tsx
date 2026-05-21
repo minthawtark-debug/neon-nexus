@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
 import { getTelegramUser } from "@/lib/telegram";
-import { UserPlus, Send, Link2, ShoppingBag, Shield, Zap, Radio, Hash } from "lucide-react";
+import { UserPlus, Send, Link2, ShoppingBag, Shield, Zap, Radio, Hash, TrendingUp, TrendingDown, Globe, Satellite } from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: Index });
 
