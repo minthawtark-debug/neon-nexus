@@ -148,49 +148,6 @@ function Index() {
       {/* Live Exchange Rate Dashboard */}
       <LiveExchangeDashboard />
 
-      {/* Nav hub */}
-      <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-widest text-muted-foreground">
-        Navigation Hub
-      </h2>
-      <div className="grid grid-cols-2 gap-3">
-        {navCards.map((c, i) => {
-          const Icon = c.icon;
-          const isCyan = c.color === "cyan";
-          return (
-            <Link
-              key={c.to}
-              to={c.to}
-              className="group glass-panel relative overflow-hidden rounded-2xl p-4 transition-all hover:-translate-y-0.5 animate-float-up"
-              style={{
-                animationDelay: `${180 + i * 60}ms`,
-                borderColor: isCyan ? "rgba(0,240,255,0.3)" : "rgba(157,0,255,0.35)",
-              }}
-            >
-              <div
-                className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg"
-                style={{
-                  background: isCyan
-                    ? "linear-gradient(135deg, rgba(0,240,255,0.2), rgba(0,240,255,0.05))"
-                    : "linear-gradient(135deg, rgba(157,0,255,0.25), rgba(157,0,255,0.05))",
-                  boxShadow: isCyan
-                    ? "0 0 12px rgba(0,240,255,0.4), inset 0 0 8px rgba(0,240,255,0.15)"
-                    : "0 0 12px rgba(157,0,255,0.45), inset 0 0 8px rgba(157,0,255,0.15)",
-                }}
-              >
-                <Icon className={`h-5 w-5 ${isCyan ? "text-[var(--neon-cyan)]" : "text-[var(--neon-purple)]"}`} />
-              </div>
-              <div className={`font-display text-sm font-bold ${isCyan ? "neon-text-cyan" : "neon-text-purple"}`}>
-                {c.label}
-              </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground">{c.desc}</div>
-              <div
-                className="absolute -right-6 -top-6 h-16 w-16 rounded-full opacity-50 blur-xl transition-opacity group-hover:opacity-80"
-                style={{ background: isCyan ? "rgba(0,240,255,0.3)" : "rgba(157,0,255,0.35)" }}
-              />
-            </Link>
-          );
-        })}
-      </div>
     </Shell>
   );
 }
