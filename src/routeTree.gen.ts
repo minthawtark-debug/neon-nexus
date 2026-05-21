@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LinksRouteImport } from './routes/links'
 import { Route as ForwardRouteImport } from './routes/forward'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as IndexRouteImport } from './routes/index'
 
+const LinksRoute = LinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForwardRoute = ForwardRouteImport.update({
   id: '/forward',
   path: '/forward',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
+  '/links': typeof LinksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
+  '/links': typeof LinksRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
+  '/links': typeof LinksRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/create' | '/forward'
+  fullPaths: '/' | '/create' | '/forward' | '/links'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/forward'
-  id: '__root__' | '/' | '/create' | '/forward'
+  to: '/' | '/create' | '/forward' | '/links'
+  id: '__root__' | '/' | '/create' | '/forward' | '/links'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateRoute: typeof CreateRoute
   ForwardRoute: typeof ForwardRoute
+  LinksRoute: typeof LinksRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/links': {
+      id: '/links'
+      path: '/links'
+      fullPath: '/links'
+      preLoaderRoute: typeof LinksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forward': {
       id: '/forward'
       path: '/forward'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateRoute: CreateRoute,
   ForwardRoute: ForwardRoute,
+  LinksRoute: LinksRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
