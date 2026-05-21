@@ -118,6 +118,42 @@ export type Database = {
         }
         Relationships: []
       }
+      proxies: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string
+          is_active: boolean
+          last_tested_at: string | null
+          password: string | null
+          port: number
+          raw_text: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip: string
+          is_active?: boolean
+          last_tested_at?: string | null
+          password?: string | null
+          port: number
+          raw_text: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string
+          is_active?: boolean
+          last_tested_at?: string | null
+          password?: string | null
+          port?: number
+          raw_text?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
