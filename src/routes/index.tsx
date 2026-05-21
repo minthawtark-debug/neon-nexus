@@ -8,7 +8,7 @@ import {
   getForwardAnalytics,
   disconnectMyUserbots,
 } from "@/lib/app.functions";
-import { Zap, Hash, ChevronDown, Activity, Target, Gauge, LogOut, Loader2 } from "lucide-react";
+import { Zap, Hash, ChevronDown, Activity, Target, Gauge, LogOut, Loader2, ShieldAlert, RefreshCw } from "lucide-react";
 import { LiveExchangeDashboard } from "@/components/LiveExchangeDashboard";
 
 export const Route = createFileRoute("/")({ component: Index });
@@ -39,10 +39,7 @@ function Index() {
   if (error || !session) {
     return (
       <Shell>
-        <div className="glass-panel mt-10 rounded-2xl p-6 text-center">
-          <h2 className="font-display text-lg font-bold neon-text-purple">SESSION ERROR</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{error ?? "Unable to load your Telegram session."}</p>
-        </div>
+        <InitDataErrorScreen error={error} />
       </Shell>
     );
   }
