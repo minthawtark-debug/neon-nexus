@@ -281,6 +281,7 @@ function LiveExchangeDashboard() {
       </div>
     </div>
   );
+}
 
 function FieldInput({
   label, value, onChange, placeholder,
