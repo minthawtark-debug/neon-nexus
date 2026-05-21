@@ -250,3 +250,108 @@ export const adminRemoveUserbot = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ============================================================
+ * PROXY MAINFRAME — ingestion from t.me/V_Usproxy1
+ * ============================================================ */
+
+const PROXY_SOURCE_CHANNEL = "https://t.me/V_Usproxy1";
+
+/** Parses raw lines like:
+ *   socks5://ip:port:user:pass
+ *   socks5://user:pass@ip:port
+ *   ip:port:user:pass
+ *   ip:port
+ */
+function parseProxyLine(line: string) {
+  const raw = line.trim();
+  if (!raw) return null;
+  const stripped = raw.replace(/^[a-z0-9]+:\/\//i, "");
+
+  // user:pass@ip:port
+  const at = stripped.split("@");
+  if (at.length === 2) {
+    const [creds, hostPort] = at;
+    const [username, password] = creds.split(":");
+    const [ip, portStr] = hostPort.split(":");
+    const port = Number(portStr);
+    if (!ip || !port) return null;
+    return { raw_text: raw, ip, port, username: username ?? null, password: password ?? null };
+  }
+
+  // ip:port[:user:pass]
+  const parts = stripped.split(":");
+  if (parts.length < 2) return null;
+  const [ip, portStr, username, password] = parts;
+  const port = Number(portStr);
+  if (!ip || !port) return null;
+  return {
+    raw_text: raw,
+    ip,
+    port,
+    username: username ?? null,
+    password: password ?? null,
+  };
+}
+
+/** Simulated ingestion from the source channel. In production, replace with
+ *  the Telethon worker callback that posts new proxies into the table. */
+function generateMockProxyBatch(count = 8): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const ip = `${10 + Math.floor(Math.random() * 240)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`;
+    const port = 1080 + Math.floor(Math.random() * 50000);
+    const user = `u${Math.floor(Math.random() * 9999)}`;
+    const pass = Math.random().toString(36).slice(2, 10);
+    out.push(`socks5://${ip}:${port}:${user}:${pass}`);
+  }
+  return out;
+}
+
+export const adminGetProxyOverview = createServerFn({ method: "POST" })
+  .inputValidator((d) => InitDataInput.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.initData);
+    const [{ count: total }, { count: active }, { count: dead }, { data: recent }] =
+      await Promise.all([
+        supabaseAdmin.from("proxies").select("*", { count: "exact", head: true }),
+        supabaseAdmin
+          .from("proxies")
+          .select("*", { count: "exact", head: true })
+          .eq("is_active", true),
+        supabaseAdmin
+          .from("proxies")
+          .select("*", { count: "exact", head: true })
+          .eq("is_active", false),
+        supabaseAdmin
+          .from("proxies")
+          .select("id, ip, port, is_active, last_tested_at, created_at")
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
+    return {
+      sourceChannel: PROXY_SOURCE_CHANNEL,
+      total: total ?? 0,
+      active: active ?? 0,
+      dead: dead ?? 0,
+      recent: recent ?? [],
+    };
+  });
+
+export const adminForceSyncProxies = createServerFn({ method: "POST" })
+  .inputValidator((d) => InitDataInput.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin(data.initData);
+    const batch = generateMockProxyBatch(8 + Math.floor(Math.random() * 6));
+    const rows = batch
+      .map(parseProxyLine)
+      .filter((p): p is NonNullable<ReturnType<typeof parseProxyLine>> => !!p);
+    if (rows.length === 0) return { ingested: 0, skipped: 0 };
+    const { data: inserted, error } = await supabaseAdmin
+      .from("proxies")
+      .upsert(rows, { onConflict: "raw_text", ignoreDuplicates: true })
+      .select("id");
+    if (error) throw new Error(error.message);
+    const ingested = inserted?.length ?? 0;
+    return { ingested, skipped: rows.length - ingested, source: PROXY_SOURCE_CHANNEL };
+  });
