@@ -1,25 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Shell } from "@/components/Shell";
-import { getTelegramUser } from "@/lib/telegram";
-import { Zap, Hash, ChevronDown } from "lucide-react";
+import { useSession } from "@/hooks/use-session";
+import {
+  getForwardAnalytics,
+  disconnectMyUserbots,
+} from "@/lib/app.functions";
+import { Zap, Hash, ChevronDown, Activity, Target, Gauge, LogOut, Loader2 } from "lucide-react";
 import { LiveExchangeDashboard } from "@/components/LiveExchangeDashboard";
 
 export const Route = createFileRoute("/")({ component: Index });
 
 
 function Index() {
-  const user = getTelegramUser();
+  const { session, loading, error } = useSession();
   const [link, setLink] = useState("");
   const [linkType, setLinkType] = useState<"Channel" | "Group">("Channel");
   const [saved, setSaved] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const active = true;
 
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   };
+
+  if (loading) {
+    return (
+      <Shell>
+        <div className="flex h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--neon-cyan)]" />
+        </div>
+      </Shell>
+    );
+  }
+
+  if (error || !session) {
+    return (
+      <Shell>
+        <div className="glass-panel mt-10 rounded-2xl p-6 text-center">
+          <h2 className="font-display text-lg font-bold neon-text-purple">SESSION ERROR</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{error ?? "Unable to load your Telegram session."}</p>
+        </div>
+      </Shell>
+    );
+  }
+
+  const { profile, isAdmin, initData } = session;
+  const active = true;
 
   return (
     <Shell>
@@ -49,11 +78,11 @@ function Index() {
       <div className="glass-panel mb-5 rounded-2xl p-4 animate-float-up" style={{ animationDelay: "60ms" }}>
         <div className="flex items-center gap-3">
           <div className="relative">
-            {user.photo_url ? (
-              <img src={user.photo_url} alt="" className="h-14 w-14 rounded-xl object-cover" />
+            {profile.photo_url ? (
+              <img src={profile.photo_url} alt="" className="h-14 w-14 rounded-xl object-cover" />
             ) : (
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--neon-purple)] to-[var(--neon-cyan)] font-display text-xl font-bold text-black">
-                {(user.first_name?.[0] || user.username?.[0] || "U").toUpperCase()}
+                {(profile.first_name?.[0] || profile.username?.[0] || "U").toUpperCase()}
               </div>
             )}
             <span
@@ -63,11 +92,16 @@ function Index() {
           </div>
           <div className="flex-1">
             <div className="font-display text-base font-semibold text-foreground">
-              @{user.username ?? user.first_name ?? "operator"}
+              @{profile.username ?? profile.first_name ?? "operator"}
+              {isAdmin && (
+                <span className="ml-2 rounded border border-[var(--neon-purple)]/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--neon-purple)]">
+                  Admin
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs">
               <Hash className="h-3 w-3 text-[var(--neon-cyan)]" />
-              <span className="font-mono text-muted-foreground">{user.id}</span>
+              <span className="font-mono text-muted-foreground">{profile.telegram_id}</span>
             </div>
           </div>
           <div
@@ -78,6 +112,9 @@ function Index() {
           </div>
         </div>
       </div>
+
+      {/* Analytics */}
+      <AnalyticsPanel initData={initData} />
 
       {/* Configuration */}
       <div className="glass-panel mb-5 rounded-2xl p-4 animate-float-up" style={{ animationDelay: "120ms" }}>
@@ -149,5 +186,91 @@ function Index() {
       <LiveExchangeDashboard />
 
     </Shell>
+  );
+}
+
+function AnalyticsPanel({ initData }: { initData: string }) {
+  const fetchAnalytics = useServerFn(getForwardAnalytics);
+  const disconnect = useServerFn(disconnectMyUserbots);
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["analytics", initData],
+    queryFn: () => fetchAnalytics({ data: { initData } }),
+  });
+
+  const mutation = useMutation({
+    mutationFn: () => disconnect({ data: { initData } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["analytics"] }),
+  });
+
+  const health = data?.health ?? { level: "healthy" as const, label: "HEALTHY (Low Spam Risk)" };
+  const healthColor =
+    health.level === "danger"
+      ? "from-red-500 to-orange-500 text-red-300 border-red-500/50"
+      : health.level === "warn"
+        ? "from-orange-500 to-yellow-500 text-orange-300 border-orange-500/50"
+        : "from-emerald-500 to-[var(--neon-cyan)] text-emerald-300 border-emerald-500/50";
+  const healthWidth =
+    health.level === "danger" ? "100%" : health.level === "warn" ? "65%" : "25%";
+
+  return (
+    <div className="glass-panel mb-5 rounded-2xl p-4 animate-float-up" style={{ animationDelay: "90ms" }}>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-display text-sm font-bold uppercase tracking-widest neon-text-cyan">
+          Userbot Stats
+        </h2>
+        <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <Activity className="h-3 w-3 text-emerald-400" /> Live
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <StatTile icon={Target} label="Targets Today" value={isLoading ? "—" : String(data?.dailyTargetsReached ?? 0)} accent="cyan" />
+        <StatTile icon={Gauge} label="Fwd / Day" value={isLoading ? "—" : String(data?.forwardsPerDay ?? 0)} accent="purple" />
+      </div>
+
+      <div className="mt-3">
+        <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-widest">
+          <span className="text-muted-foreground">Account Health</span>
+          <span className={`font-bold ${health.level === "danger" ? "text-red-300" : health.level === "warn" ? "text-orange-300" : "text-emerald-300"}`}>
+            {health.label}
+          </span>
+        </div>
+        <div className={`relative h-2 overflow-hidden rounded-full border bg-[rgba(13,14,18,0.7)] ${healthColor.split(" ").slice(-1)}`}>
+          <div
+            className={`h-full bg-gradient-to-r ${healthColor.split(" ").slice(0, 2).join(" ")} transition-all duration-500`}
+            style={{ width: healthWidth, boxShadow: "0 0 12px currentColor" }}
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={() => {
+          if (confirm("Disconnect all your userbots? This logs them out on your physical device as well.")) {
+            mutation.mutate();
+          }
+        }}
+        disabled={mutation.isPending}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/50 bg-red-500/10 py-2 font-display text-xs font-bold uppercase tracking-widest text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+      >
+        <LogOut className="h-3.5 w-3.5" />
+        {mutation.isPending ? "Disconnecting…" : mutation.isSuccess ? `Terminated ${mutation.data?.terminated ?? 0}` : "Disconnect / Logout Userbot"}
+      </button>
+    </div>
+  );
+}
+
+function StatTile({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; accent: "cyan" | "purple" }) {
+  const isCyan = accent === "cyan";
+  return (
+    <div
+      className="glass-panel rounded-xl p-3"
+      style={{ borderColor: isCyan ? "rgba(0,240,255,0.3)" : "rgba(157,0,255,0.35)" }}
+    >
+      <Icon className={`mb-1 h-4 w-4 ${isCyan ? "text-[var(--neon-cyan)]" : "text-[var(--neon-purple)]"}`} />
+      <div className={`font-display text-xl font-black ${isCyan ? "neon-text-cyan" : "neon-text-purple"}`}>{value}</div>
+      <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</div>
+    </div>
   );
 }
