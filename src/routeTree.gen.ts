@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StoreRouteImport } from './routes/store'
 import { Route as LinksRouteImport } from './routes/links'
 import { Route as ForwardRouteImport } from './routes/forward'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as IndexRouteImport } from './routes/index'
 
+const StoreRoute = StoreRouteImport.update({
+  id: '/store',
+  path: '/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LinksRoute = LinksRouteImport.update({
   id: '/links',
   path: '/links',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
   '/links': typeof LinksRoute
+  '/store': typeof StoreRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
   '/links': typeof LinksRoute
+  '/store': typeof StoreRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/create': typeof CreateRoute
   '/forward': typeof ForwardRoute
   '/links': typeof LinksRoute
+  '/store': typeof StoreRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/create' | '/forward' | '/links'
+  fullPaths: '/' | '/create' | '/forward' | '/links' | '/store'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/forward' | '/links'
-  id: '__root__' | '/' | '/create' | '/forward' | '/links'
+  to: '/' | '/create' | '/forward' | '/links' | '/store'
+  id: '__root__' | '/' | '/create' | '/forward' | '/links' | '/store'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +76,18 @@ export interface RootRouteChildren {
   CreateRoute: typeof CreateRoute
   ForwardRoute: typeof ForwardRoute
   LinksRoute: typeof LinksRoute
+  StoreRoute: typeof StoreRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/store': {
+      id: '/store'
+      path: '/store'
+      fullPath: '/store'
+      preLoaderRoute: typeof StoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/links': {
       id: '/links'
       path: '/links'
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateRoute: CreateRoute,
   ForwardRoute: ForwardRoute,
   LinksRoute: LinksRoute,
+  StoreRoute: StoreRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
