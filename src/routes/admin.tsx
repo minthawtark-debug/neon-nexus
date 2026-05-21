@@ -2,13 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Shell, PageHeader } from "@/components/Shell";
-import { Users, Send, Bot, Power, Trash2, Activity, ShieldAlert, Loader2 } from "lucide-react";
+import { Users, Send, Bot, Power, Trash2, Activity, ShieldAlert, Loader2, Radio, RefreshCw, CheckCircle2, Radar, Skull } from "lucide-react";
+import { useState } from "react";
 import { useSession } from "@/hooks/use-session";
 import { InitDataErrorScreen } from "./index";
 import {
   adminGetOverview,
   adminToggleUserbot,
   adminRemoveUserbot,
+  adminGetProxyOverview,
+  adminForceSyncProxies,
 } from "@/lib/app.functions";
 
 export const Route = createFileRoute("/admin")({ component: AdminPage });
@@ -140,7 +143,190 @@ function AdminPanel({ initData }: { initData: string }) {
           </div>
         )}
       </div>
+
+      <ProxyMainframe initData={initData} />
     </Shell>
+  );
+}
+
+function ProxyMainframe({ initData }: { initData: string }) {
+  const fetchOverview = useServerFn(adminGetProxyOverview);
+  const syncFn = useServerFn(adminForceSyncProxies);
+  const qc = useQueryClient();
+  const [pulseOk, setPulseOk] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["proxy-overview", initData],
+    queryFn: () => fetchOverview({ data: { initData } }),
+    refetchInterval: 15_000,
+  });
+
+  const sync = useMutation({
+    mutationFn: () => syncFn({ data: { initData } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["proxy-overview"] });
+      setPulseOk(true);
+      setTimeout(() => setPulseOk(false), 2200);
+    },
+  });
+
+  return (
+    <section className="mt-6 animate-float-up">
+      <div className="mb-3 flex items-center gap-2">
+        <Radio className="h-4 w-4 text-[var(--neon-cyan)]" />
+        <h2
+          className="font-display text-sm font-black uppercase tracking-[0.3em] neon-text-cyan"
+          style={{ textShadow: "0 0 10px rgba(0,240,255,0.6)" }}
+        >
+          📡 Proxy Mainframe
+        </h2>
+      </div>
+
+      {/* Source card */}
+      <div
+        className="glass-panel relative overflow-hidden rounded-2xl p-4"
+        style={{
+          borderColor: "rgba(0,240,255,0.45)",
+          boxShadow: "0 0 24px rgba(0,240,255,0.18), inset 0 0 18px rgba(0,240,255,0.06)",
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              Source Channel
+            </div>
+            <a
+              href={data?.sourceChannel ?? "https://t.me/V_Usproxy1"}
+              target="_blank"
+              rel="noreferrer"
+              className="block truncate font-mono text-sm font-bold neon-text-cyan"
+              style={{ textShadow: "0 0 8px rgba(0,240,255,0.85)" }}
+            >
+              {data?.sourceChannel ?? "https://t.me/V_Usproxy1"}
+            </a>
+          </div>
+          <span className="flex items-center gap-1.5 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px rgb(52,211,153)" }} />
+            Live Link
+          </span>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <ProxyStat icon={Radar} label="Ingested" value={data?.total ?? 0} color="cyan" />
+        <ProxyStat icon={CheckCircle2} label="Live" value={data?.active ?? 0} color="emerald" />
+        <ProxyStat icon={Skull} label="Dead" value={data?.dead ?? 0} color="red" />
+      </div>
+
+      {/* Force sync */}
+      <button
+        onClick={() => sync.mutate()}
+        disabled={sync.isPending}
+        className={`group relative mt-3 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border-2 px-4 py-3 font-display text-xs font-black uppercase tracking-[0.3em] transition ${
+          pulseOk
+            ? "border-emerald-400 bg-emerald-500/15 text-emerald-200"
+            : sync.isPending
+              ? "border-[var(--neon-cyan)] bg-[rgba(0,240,255,0.1)] text-[var(--neon-cyan)]"
+              : "border-[var(--neon-cyan)]/60 bg-[rgba(0,240,255,0.06)] text-[var(--neon-cyan)] hover:bg-[rgba(0,240,255,0.14)]"
+        }`}
+        style={{
+          boxShadow: pulseOk
+            ? "0 0 32px rgba(52,211,153,0.6), inset 0 0 18px rgba(52,211,153,0.25)"
+            : sync.isPending
+              ? "0 0 28px rgba(0,240,255,0.55)"
+              : "0 0 14px rgba(0,240,255,0.25)",
+        }}
+      >
+        {sync.isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="animate-pulse">Syncing Mainframe…</span>
+          </>
+        ) : pulseOk ? (
+          <>
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Sync Complete · +{sync.data?.ingested ?? 0}</span>
+          </>
+        ) : (
+          <>
+            <RefreshCw className="h-4 w-4" />
+            <span>🔄 Force Sync Now</span>
+          </>
+        )}
+      </button>
+
+      {/* Recent feed */}
+      <div className="mt-4 glass-panel rounded-2xl p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="font-display text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+            Recent Ingestion
+          </h3>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Auto-refresh 15s
+          </span>
+        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--neon-cyan)]" />
+          </div>
+        ) : (data?.recent ?? []).length === 0 ? (
+          <p className="py-6 text-center text-xs text-muted-foreground">
+            No proxies ingested yet. Press Force Sync to bootstrap the pool.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data!.recent.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center gap-2 rounded-md border border-border bg-[rgba(13,14,18,0.5)] px-2 py-1.5 font-mono text-[11px]"
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${p.is_active ? "bg-emerald-400" : "bg-red-500"}`}
+                  style={{ boxShadow: p.is_active ? "0 0 6px rgb(52,211,153)" : "0 0 6px rgb(239,68,68)" }}
+                />
+                <span className="flex-1 truncate text-foreground">
+                  {p.ip}:{p.port}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {p.last_tested_at ? new Date(p.last_tested_at).toLocaleTimeString() : "untested"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ProxyStat({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  color: "cyan" | "emerald" | "red";
+}) {
+  const palette = {
+    cyan: { border: "rgba(0,240,255,0.35)", text: "text-[var(--neon-cyan)]", glow: "neon-text-cyan" },
+    emerald: { border: "rgba(52,211,153,0.45)", text: "text-emerald-300", glow: "text-emerald-300" },
+    red: { border: "rgba(239,68,68,0.45)", text: "text-red-400", glow: "text-red-400" },
+  }[color];
+  return (
+    <div
+      className="glass-panel relative overflow-hidden rounded-xl p-3"
+      style={{ borderColor: palette.border }}
+    >
+      <Icon className={`mb-1 h-4 w-4 ${palette.text}`} />
+      <div className={`font-display text-xl font-black ${palette.glow}`}>
+        {value.toLocaleString()}
+      </div>
+      <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</div>
+    </div>
   );
 }
 
