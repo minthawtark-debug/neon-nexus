@@ -39,10 +39,6 @@ function Index() {
               <h1 className="font-display text-2xl font-black uppercase tracking-[0.25em] neon-text-cyan">
                 V3 Network
               </h1>
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <Radio className="h-3 w-3 text-[var(--neon-purple)]" />
-                <span>Mainframe Online</span>
-              </div>
             </div>
           </div>
         </div>
