@@ -7,13 +7,6 @@ import { LiveExchangeDashboard, FieldInput } from "@/components/LiveExchangeDash
 
 export const Route = createFileRoute("/")({ component: Index });
 
-const navCards = [
-  { to: "/create", label: "Create Userbot", desc: "API setup wizard", icon: UserPlus, color: "cyan" },
-  { to: "/forward", label: "Forwarder", desc: "Mass message engine", icon: Send, color: "purple" },
-  { to: "/links", label: "Public Links", desc: "Ad submission hub", icon: Link2, color: "cyan" },
-  { to: "/store", label: "Store", desc: "Premium digital goods", icon: ShoppingBag, color: "purple" },
-  { to: "/admin", label: "Admin Panel", desc: "System control", icon: Shield, color: "cyan" },
-] as const;
 
 function Index() {
   const user = getTelegramUser();
