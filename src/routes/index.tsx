@@ -7,8 +7,9 @@ import { useSession } from "@/hooks/use-session";
 import {
   getForwardAnalytics,
   disconnectMyUserbots,
+  resolveTelegramPeerId,
 } from "@/lib/app.functions";
-import { Zap, Hash, ChevronDown, Activity, Target, Gauge, LogOut, Loader2, ShieldAlert, RefreshCw } from "lucide-react";
+import { Zap, Hash, ChevronDown, Activity, Target, Gauge, LogOut, Loader2, ShieldAlert, RefreshCw, Copy, Check } from "lucide-react";
 import { LiveExchangeDashboard } from "@/components/LiveExchangeDashboard";
 
 export const Route = createFileRoute("/")({ component: Index });
@@ -20,6 +21,12 @@ function Index() {
   const [linkType, setLinkType] = useState<"Channel" | "Group">("Channel");
   const [saved, setSaved] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [converterInput, setConverterInput] = useState("");
+  const [converterResult, setConverterResult] = useState<string | null>(null);
+  const [converterNote, setConverterNote] = useState<string>("");
+  const [converterLoading, setConverterLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const resolveFn = useServerFn(resolveTelegramPeerId);
 
   const handleSave = () => {
     setSaved(true);
@@ -114,6 +121,36 @@ function Index() {
       <AnalyticsPanel initData={initData} />
 
       {/* Configuration */}
+      <TelegramIdConverterCard
+        input={converterInput}
+        onInput={(value) => { setConverterInput(value); setCopied(false); }}
+        result={converterResult}
+        note={converterNote}
+        isLoading={converterLoading}
+        onResolve={async () => {
+          setConverterLoading(true);
+          try {
+            const response = await resolveFn({ data: { link: converterInput } });
+            setConverterResult(response.result);
+            setConverterNote(response.note ?? "");
+          } catch (err) {
+            setConverterResult(null);
+            setConverterNote("Failed to resolve link. Please try again.");
+          } finally {
+            setConverterLoading(false);
+          }
+        }}
+        onCopy={async () => {
+          if (!converterResult) return;
+          try {
+            await navigator.clipboard.writeText(converterResult);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1600);
+          } catch {
+            setCopied(false);
+          }
+        }}
+      />
       <div className="glass-panel mb-5 rounded-2xl p-4 animate-float-up" style={{ animationDelay: "120ms" }}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-sm font-bold uppercase tracking-widest neon-text-purple">
@@ -254,6 +291,91 @@ function AnalyticsPanel({ initData }: { initData: string }) {
         <LogOut className="h-3.5 w-3.5" />
         {mutation.isPending ? "Disconnecting…" : mutation.isSuccess ? `Terminated ${mutation.data?.terminated ?? 0}` : "Disconnect / Logout Userbot"}
       </button>
+    </div>
+  );
+}
+
+function TelegramIdConverterCard({
+  input,
+  onInput,
+  result,
+  note,
+  isLoading,
+  onResolve,
+  onCopy,
+}: {
+  input: string;
+  onInput: (value: string) => void;
+  result: string | null;
+  note: string;
+  isLoading: boolean;
+  onResolve: () => Promise<void>;
+  onCopy: () => Promise<void>;
+}) {
+  return (
+    <div className="glass-panel mb-5 rounded-2xl p-5 animate-float-up" style={{ animationDelay: "105ms" }}>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="font-display text-sm font-bold uppercase tracking-widest neon-text-cyan">
+            Telegram ID Converter Dashboard
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Paste a public channel/group link or numeric ID and convert it into a Telegram peer ID.
+          </p>
+        </div>
+        <div className="rounded-full bg-[rgba(0,240,255,0.08)] px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-[var(--neon-cyan)]">
+          Mini Tool
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Telegram Channel / Group Link
+        </label>
+        <input
+          value={input}
+          onChange={(e) => onInput(e.target.value)}
+          placeholder="https://t.me/channel_username or @channel_username"
+          className="w-full rounded-2xl border border-[rgba(0,240,255,0.2)] bg-[rgba(13,14,18,0.75)] px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-[var(--neon-cyan)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,240,255,0.18)]"
+        />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            onClick={onResolve}
+            disabled={isLoading || input.trim().length === 0}
+            className="btn-neon flex-1 items-center justify-center rounded-2xl px-4 py-3 text-sm font-bold uppercase tracking-widest disabled:opacity-60"
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Convert to ID"}
+          </button>
+          <button
+            onClick={onCopy}
+            disabled={!result}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-[rgba(0,240,255,0.2)] bg-[rgba(0,240,255,0.08)] px-4 py-3 text-sm font-semibold uppercase tracking-widest text-[var(--neon-cyan)] transition hover:border-[var(--neon-cyan)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Copy className="h-4 w-4" />
+            {result ? "Copy" : "No result"}
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-[rgba(0,240,255,0.15)] bg-[rgba(0,240,255,0.05)] p-4">
+          <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span>Result</span>
+            <span className="text-[11px] text-[var(--neon-cyan)]">{result ? "Ready" : "Waiting"}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(0,240,255,0.12)] bg-[#0f1118] px-4 py-3 text-sm font-mono text-foreground">
+            <span className="truncate">{result ?? "No ID converted yet"}</span>
+            {result && (
+              <button
+                onClick={onCopy}
+                className="flex items-center gap-1 rounded-full bg-[rgba(0,240,255,0.12)] px-3 py-1 text-[10px] uppercase tracking-widest text-[var(--neon-cyan)]"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {"Copy"}
+              </button>
+            )}
+          </div>
+          {note ? <p className="mt-2 text-[11px] text-muted-foreground">{note}</p> : null}
+        </div>
+      </div>
     </div>
   );
 }

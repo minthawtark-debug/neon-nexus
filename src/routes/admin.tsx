@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Shell, PageHeader } from "@/components/Shell";
-import { Users, Send, Bot, Power, Trash2, Activity, ShieldAlert, Loader2, Radio, RefreshCw, CheckCircle2, Radar, Skull } from "lucide-react";
+import { Users, Send, Bot, Power, Trash2, Activity, ShieldAlert, Loader2, Radio, RefreshCw, CheckCircle2, Radar, Skull, Calendar, Clock, Edit3 } from "lucide-react";
 import { useState } from "react";
 import { useSession } from "@/hooks/use-session";
 import { InitDataErrorScreen } from "./index";
@@ -10,6 +10,7 @@ import {
   adminGetOverview,
   adminToggleUserbot,
   adminRemoveUserbot,
+  adminExtendUserbot,
   adminGetProxyOverview,
   adminForceSyncProxies,
 } from "@/lib/app.functions";
@@ -71,6 +72,7 @@ function AdminPanel({ initData }: { initData: string }) {
   const fetchOverview = useServerFn(adminGetOverview);
   const toggleFn = useServerFn(adminToggleUserbot);
   const removeFn = useServerFn(adminRemoveUserbot);
+  const extendFn = useServerFn(adminExtendUserbot);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -119,26 +121,16 @@ function AdminPanel({ initData }: { initData: string }) {
         ) : (
           <div className="space-y-2">
             {bots.map((b, i) => (
-            <div key={b.id} className="flex items-center gap-3 rounded-lg border border-border bg-[rgba(13,14,18,0.5)] p-3 transition hover:border-[rgba(0,240,255,0.4)] animate-float-up" style={{ animationDelay: `${i * 40}ms` }}>
-              <div className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[rgba(0,240,255,0.2)] to-[rgba(157,0,255,0.2)] font-display text-sm font-bold text-foreground">
-                  {(b.username?.[0] ?? "?").toUpperCase()}
-                </div>
-                <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--bg-base)] ${b.active ? "bg-emerald-400" : "bg-zinc-600"}`} style={b.active ? { boxShadow: "0 0 6px rgb(52,211,153)" } : undefined} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-display text-sm font-semibold text-foreground">@{b.username ?? "unknown"}</div>
-                <div className="font-mono text-[10px] text-muted-foreground">{b.phone ?? "—"} · {b.forwards24h} fwds/24h</div>
-              </div>
-              <button onClick={() => toggle.mutate({ id: b.id, active: !b.active })} title={b.active ? "Deactivate" : "Activate"}
-                className={`flex h-8 w-8 items-center justify-center rounded-md border transition ${b.active ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20" : "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-[var(--neon-cyan)] hover:text-[var(--neon-cyan)]"}`}>
-                <Power className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => { if (confirm("Remove this userbot?")) remove.mutate(b.id); }} title="Remove"
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-red-500/40 bg-red-500/10 text-red-300 transition hover:bg-red-500/20">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            <SubscriptionManagementRow 
+              key={b.id} 
+              bot={b} 
+              i={i}
+              onToggle={() => toggle.mutate({ id: b.id, active: !b.active })}
+              onRemove={() => { if (confirm("Remove this userbot?")) remove.mutate(b.id); }}
+              onExtend={(days, hours, expiryDate) => extendFn({ data: { initData, userbot_id: b.id, days_to_add: days, hours_to_add: hours, expiry_date: expiryDate } })}
+              isToggling={toggle.isPending}
+              isRemoving={remove.isPending}
+            />
             ))}
           </div>
         )}
@@ -146,6 +138,128 @@ function AdminPanel({ initData }: { initData: string }) {
 
       <ProxyMainframe initData={initData} />
     </Shell>
+  );
+}
+
+function SubscriptionManagementRow({
+  bot,
+  i,
+  onToggle,
+  onRemove,
+  onExtend,
+  isToggling,
+  isRemoving,
+}: {
+  bot: any;
+  i: number;
+  onToggle: () => void;
+  onRemove: () => void;
+  onExtend: (days?: number, hours?: number, expiryDate?: string) => void;
+  isToggling: boolean;
+  isRemoving: boolean;
+}) {
+  const [expandedBotId, setExpandedBotId] = useState<string | null>(null);
+  const [daysToAdd, setDaysToAdd] = useState("0");
+  const [hoursToAdd, setHoursToAdd] = useState("0");
+  const [expiryDate, setExpiryDate] = useState("");
+
+  const isExpanded = expandedBotId === bot.id;
+
+  return (
+    <div key={bot.id} className="rounded-lg border border-border bg-[rgba(13,14,18,0.5)] animate-float-up" style={{ animationDelay: `${i * 40}ms` }}>
+      <div className="flex items-center gap-3 p-3 transition hover:border-[rgba(0,240,255,0.4)]">
+        <div className="relative">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[rgba(0,240,255,0.2)] to-[rgba(157,0,255,0.2)] font-display text-sm font-bold text-foreground">
+            {(bot.username?.[0] ?? "?").toUpperCase()}
+          </div>
+          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--bg-base)] ${bot.active ? "bg-emerald-400" : "bg-zinc-600"}`} style={bot.active ? { boxShadow: "0 0 6px rgb(52,211,153)" } : undefined} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-display text-sm font-semibold text-foreground">@{bot.username ?? "unknown"}</div>
+          <div className="font-mono text-[10px] text-muted-foreground">{bot.phone ?? "—"} · {bot.forwards24h} fwds/24h</div>
+        </div>
+        <button 
+          onClick={() => onToggle()} 
+          disabled={isToggling}
+          title={bot.active ? "Deactivate" : "Activate"}
+          className={`flex h-8 w-8 items-center justify-center rounded-md border transition ${bot.active ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20" : "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-[var(--neon-cyan)] hover:text-[var(--neon-cyan)]"}`}
+        >
+          <Power className="h-3.5 w-3.5" />
+        </button>
+        <button 
+          onClick={() => setExpandedBotId(isExpanded ? null : bot.id)}
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--neon-purple)]/40 bg-[rgba(157,0,255,0.1)] text-[var(--neon-purple)] hover:bg-[rgba(157,0,255,0.15)]"
+        >
+          <Edit3 className="h-3.5 w-3.5" />
+        </button>
+        <button 
+          onClick={() => onRemove()} 
+          disabled={isRemoving}
+          title="Remove"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-red-500/40 bg-red-500/10 text-red-300 transition hover:bg-red-500/20"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Subscription extension UI */}
+      {isExpanded && (
+        <div className="border-t border-border bg-[rgba(0,0,0,0.3)] p-3 space-y-2">
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[var(--neon-purple)] mb-2">
+            Extend Subscription
+          </h4>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Days</label>
+              <input 
+                type="number" 
+                min="0" 
+                value={daysToAdd} 
+                onChange={(e) => setDaysToAdd(e.target.value)}
+                placeholder="0"
+                className="w-full rounded border border-[rgba(0,240,255,0.25)] bg-[rgba(13,14,18,0.7)] px-2 py-1.5 font-mono text-xs text-foreground focus:border-[var(--neon-cyan)] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Hours</label>
+              <input 
+                type="number" 
+                min="0" 
+                value={hoursToAdd} 
+                onChange={(e) => setHoursToAdd(e.target.value)}
+                placeholder="0"
+                className="w-full rounded border border-[rgba(0,240,255,0.25)] bg-[rgba(13,14,18,0.7)] px-2 py-1.5 font-mono text-xs text-foreground focus:border-[var(--neon-cyan)] focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">Or Set Expiry Date</label>
+            <input 
+              type="datetime-local"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="w-full rounded border border-[rgba(0,240,255,0.25)] bg-[rgba(13,14,18,0.7)] px-2 py-1.5 font-mono text-xs text-foreground focus:border-[var(--neon-cyan)] focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={() => {
+              const days = parseInt(daysToAdd) || undefined;
+              const hours = parseInt(hoursToAdd) || undefined;
+              const date = expiryDate ? new Date(expiryDate).toISOString() : undefined;
+              onExtend(days, hours, date);
+              setDaysToAdd("0");
+              setHoursToAdd("0");
+              setExpiryDate("");
+              setExpandedBotId(null);
+            }}
+            className="btn-neon-purple w-full rounded-lg py-1.5 text-[10px] font-bold uppercase tracking-widest"
+          >
+            <Calendar className="h-3 w-3 inline mr-1" />
+            Update Duration
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

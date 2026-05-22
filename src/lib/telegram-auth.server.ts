@@ -1,4 +1,4 @@
-import { createHmac } from "crypto";
+import { createHmac, createHash } from "crypto";
 
 export interface VerifiedTelegramUser {
   id: number;
@@ -28,7 +28,7 @@ export function verifyInitData(initData: string): VerifiedTelegramUser {
     .sort()
     .join("\n");
 
-  const secretKey = createHmac("sha256", "WebAppData").update(token).digest();
+  const secretKey = createHash("sha256").update(token).digest();
   const computed = createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
 
   if (computed !== hash) throw new Error("Invalid Telegram signature");

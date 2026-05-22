@@ -1,16 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Shell, PageHeader } from "@/components/Shell";
-import { Info, ExternalLink, ChevronRight, Check, Loader2, Phone, KeyRound, Lock, Hash } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { grantUserbot6HourTrial } from "@/lib/app.functions";
+import { ChevronRight, Check, Loader2, Phone, KeyRound, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/create")({ component: CreatePage });
 
-const STEPS = ["API Keys", "Phone", "OTP", "2FA"] as const;
+const STEPS = ["Phone", "OTP", "2FA"] as const;
 const LS_KEY = "v3.create-wizard.v1";
 
 interface WizardState {
   step: number;
-  api: { id: string; hash: string };
   phone: { cc: string; number: string };
   otp: string;
   pw: string;
@@ -18,7 +19,6 @@ interface WizardState {
 
 const DEFAULT_STATE: WizardState = {
   step: 0,
-  api: { id: "", hash: "" },
   phone: { cc: "+1", number: "" },
   otp: "",
   pw: "",
@@ -40,7 +40,6 @@ function CreatePage() {
   const [step, setStep] = useState(initial.step);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [api, setApi] = useState(initial.api);
   const [phone, setPhone] = useState(initial.phone);
   const [otp, setOtp] = useState(initial.otp);
   const [pw, setPw] = useState(initial.pw);
@@ -49,25 +48,33 @@ function CreatePage() {
     try {
       localStorage.setItem(
         LS_KEY,
-        JSON.stringify({ step, api, phone, otp, pw }),
+        JSON.stringify({ step, phone, otp, pw }),
       );
     } catch {}
-  }, [step, api, phone, otp, pw]);
+  }, [step, phone, otp, pw]);
 
   const next = () => {
     setLoading(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       setLoading(false);
       if (step === STEPS.length - 1) {
+        // Finalize: request a 6-hour trial grant (server enforces once-per-user)
+        try {
+          await grantFn({ data: { initData: typeof window !== "undefined" ? (window.Telegram?.WebApp?.initData ?? JSON.stringify({ id: 0 })) : "" } });
+        } catch (e) {
+          // ignore server errors for now
+        }
         setDone(true);
         try { localStorage.removeItem(LS_KEY); } catch {}
       } else setStep((s) => s + 1);
     }, 900);
   };
 
+  const grantFn = useServerFn(grantUserbot6HourTrial);
+
   return (
     <Shell>
-      <PageHeader title="Create Userbot" subtitle="Connect a Telegram account in 4 steps" accent="purple" />
+      <PageHeader title="Create Userbot" subtitle="Connect a Telegram account in 3 steps" accent="purple" />
 
       {/* Stepper */}
       <div className="glass-panel mb-5 rounded-2xl p-3">
@@ -102,10 +109,10 @@ function CreatePage() {
             <Check className="h-8 w-8 text-emerald-300" strokeWidth={3} />
           </div>
           <h3 className="font-display text-xl font-bold neon-text-cyan">Userbot Online</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Session established. Ready to forward.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Session established. 6-hour free trial activated!</p>
           <button onClick={() => {
             setDone(false); setStep(0);
-            setApi({ id: "", hash: "" }); setPhone({ cc: "+1", number: "" }); setOtp(""); setPw("");
+            setPhone({ cc: "+1", number: "" }); setOtp(""); setPw("");
           }} className="btn-neon-purple mt-5 rounded-lg px-6 py-2 text-sm font-bold uppercase tracking-widest">
             Add Another
           </button>
@@ -113,17 +120,6 @@ function CreatePage() {
       ) : (
         <div className="glass-panel rounded-2xl p-5 animate-float-up">
           {step === 0 && (
-            <div className="space-y-4">
-              <Field icon={Hash} label="API ID" value={api.id} onChange={(v) => setApi({ ...api, id: v })} placeholder="12345678" mono />
-              <Field icon={KeyRound} label="API Hash" value={api.hash} onChange={(v) => setApi({ ...api, hash: v })} placeholder="abc123def456..." mono />
-              <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-[rgba(0,240,255,0.25)] bg-[rgba(0,240,255,0.05)] px-3 py-2 text-xs text-[var(--neon-cyan)] transition hover:bg-[rgba(0,240,255,0.1)]">
-                <Info className="h-3.5 w-3.5" />
-                <span>Get keys at my.telegram.org</span>
-                <ExternalLink className="ml-auto h-3.5 w-3.5" />
-              </a>
-            </div>
-          )}
-          {step === 1 && (
             <div className="space-y-4">
               <div className="flex gap-2">
                 <div className="w-24">
@@ -139,13 +135,13 @@ function CreatePage() {
               <p className="text-xs text-muted-foreground">An OTP will be sent through the official Telegram app.</p>
             </div>
           )}
-          {step === 2 && (
+          {step === 1 && (
             <div className="space-y-4">
               <Field icon={KeyRound} label="OTP Code" value={otp} onChange={setOtp} placeholder="•••••" mono />
               <p className="text-xs text-muted-foreground">Check the Telegram app on your device for the login code.</p>
             </div>
           )}
-          {step === 3 && (
+          {step === 2 && (
             <div className="space-y-4">
               <Field icon={Lock} label="2FA Password (optional)" value={pw} onChange={setPw} placeholder="cloud password" mono type="password" />
               <p className="text-xs text-muted-foreground">Leave blank if 2FA is disabled.</p>

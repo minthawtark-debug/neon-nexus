@@ -1,21 +1,43 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, UserPlus, Send, Link2, ShoppingBag, Shield } from "lucide-react";
+import { useSession } from "@/hooks/use-session";
+import { Home, UserPlus, Send, Newspaper, ShoppingBag, Shield, User } from "lucide-react";
 
-const items = [
+const clientItems = [
   { to: "/", label: "Home", icon: Home },
   { to: "/create", label: "Create", icon: UserPlus },
   { to: "/forward", label: "Forward", icon: Send },
-  { to: "/links", label: "Links", icon: Link2 },
+  { to: "/news", label: "News", icon: Newspaper },
+  { to: "/store", label: "Store", icon: ShoppingBag },
+  { to: "/profile", label: "Profile", icon: User },
+] as const;
+
+const adminItems = [
+  { to: "/", label: "Home", icon: Home },
+  { to: "/create", label: "Create", icon: UserPlus },
+  { to: "/forward", label: "Forward", icon: Send },
+  { to: "/news", label: "News", icon: Newspaper },
   { to: "/store", label: "Store", icon: ShoppingBag },
   { to: "/admin", label: "Admin", icon: Shield },
 ] as const;
 
 export function BottomNav() {
   const { pathname } = useLocation();
+  const { session } = useSession();
+
+  // Determine items: if admin show admin panel, else show user's name as profile label
+  const items = (session?.isAdmin)
+    ? adminItems
+    : clientItems.map((it) => it.to === "/profile" ? { ...it, label: (session?.profile.username || session?.profile.first_name || "Profile") } : it);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-2 pt-1">
-      <div className="glass-panel mx-auto flex max-w-2xl items-center justify-between rounded-2xl px-1 py-1.5"
-           style={{ borderColor: "rgba(0,240,255,0.25)", boxShadow: "0 0 24px rgba(0,240,255,0.15), 0 -4px 24px rgba(0,0,0,0.6)" }}>
+      <div
+        className="glass-panel mx-auto flex max-w-2xl items-center justify-between rounded-2xl px-1 py-1.5"
+        style={{
+          borderColor: "rgba(0,240,255,0.25)",
+          boxShadow: "0 0 24px rgba(0,240,255,0.15), 0 -4px 24px rgba(0,0,0,0.6)",
+        }}
+      >
         {items.map((it) => {
           const active = pathname === it.to;
           const Icon = it.icon;
@@ -33,7 +55,10 @@ export function BottomNav() {
                 }`}
                 style={
                   active
-                    ? { boxShadow: "0 0 12px rgba(0,240,255,0.6), inset 0 0 8px rgba(0,240,255,0.2)" }
+                    ? {
+                        boxShadow:
+                          "0 0 12px rgba(0,240,255,0.6), inset 0 0 8px rgba(0,240,255,0.2)",
+                      }
                     : undefined
                 }
               >
