@@ -25,9 +25,11 @@ export function BottomNav() {
   const { session } = useSession();
 
   // Determine items: if admin show admin panel, else show user's name as profile label
-  const items = (session?.isAdmin)
+  const items = session?.isAdmin
     ? adminItems
-    : clientItems.map((it) => it.to === "/profile" ? { ...it, label: (session?.profile.username || session?.profile.first_name || "Profile") } : it);
+    : clientItems.map((it) => it.to === "/profile" 
+      ? { ...it, label: (session?.profile?.username || session?.profile?.first_name || "Profile") } 
+      : it);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 px-2 pb-2 pt-1">

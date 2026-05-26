@@ -43,6 +43,7 @@ function CreatePage() {
   const [phone, setPhone] = useState(initial.phone);
   const [otp, setOtp] = useState(initial.otp);
   const [pw, setPw] = useState(initial.pw);
+  const grantFn = useServerFn(grantUserbot6HourTrial);
 
   useEffect(() => {
     try {
@@ -69,8 +70,6 @@ function CreatePage() {
       } else setStep((s) => s + 1);
     }, 900);
   };
-
-  const grantFn = useServerFn(grantUserbot6HourTrial);
 
   return (
     <Shell>

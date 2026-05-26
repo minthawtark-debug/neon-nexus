@@ -21,7 +21,6 @@ import {
   Activity,
 } from "lucide-react";
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/profile")({ component: ProfilePage });
 
@@ -230,9 +229,24 @@ function TrialStatusCard({ initData }: { initData: string }) {
   );
 }
 
+interface UserbotItem {
+  id: string;
+  username: string | null;
+  phone: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+interface UserbotsResponse {
+  userbots: UserbotItem[];
+}
+
 function UserbotStatusCard({ initData }: { initData: string }) {
-  const fetchBots = useServerFn(getMyUserbots as any);
-  const { data, isLoading } = useQuery({ queryKey: ["my-userbots", initData], queryFn: () => fetchBots({ data: { initData } }) });
+  const fetchBots = useServerFn(getMyUserbots);
+  const { data, isLoading } = useQuery<UserbotsResponse>({ 
+    queryKey: ["my-userbots", initData], 
+    queryFn: () => fetchBots({ data: { initData } }) 
+  });
 
   return (
     <div className="glass-panel mb-5 rounded-2xl p-4 animate-float-up" style={{ animationDelay: "120ms" }}>
@@ -253,7 +267,7 @@ function UserbotStatusCard({ initData }: { initData: string }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {(data!.userbots ?? []).map((b: any) => (
+          {(data?.userbots ?? []).map((b) => (
             <div key={b.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
               <div>
                 <div className="font-display text-sm font-semibold">@{b.username ?? "unknown"}</div>
