@@ -215,11 +215,119 @@ export type Database = {
           {
             foreignKeyName: "userbots_owner_telegram_id_fkey"
             columns: ["owner_telegram_id"]
-            isOneToOne: false
+            isOneToOne: boolean
             referencedRelation: "profiles"
             referencedColumns: ["telegram_id"]
           },
         ]
+      }
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          is_active: boolean
+          price: number
+          sort_order: number
+          stock: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          price: number
+          sort_order?: number
+          stock?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          price?: number
+          sort_order?: number
+          stock?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trial_grants: {
+        Row: {
+          created_at: string
+          expiry_time: string
+          id: string
+          start_time: string
+          status: string
+          telegram_id: number
+        }
+        Insert: {
+          created_at?: string
+          expiry_time: string
+          id?: string
+          start_time?: string
+          status?: string
+          telegram_id: number
+        }
+        Update: {
+          created_at?: string
+          expiry_time?: string
+          id?: string
+          start_time?: string
+          status?: string
+          telegram_id?: number
+        }
+        Relationships: []
+      }
+      subscription_durations: {
+        Row: {
+          created_at: string
+          days_remaining: number
+          expiry_date: string
+          extended_by_admin: string | null
+          hours_remaining: number
+          id: string
+          last_extended_at: string | null
+          notes: string | null
+          updated_at: string
+          userbot_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_remaining?: number
+          expiry_date: string
+          extended_by_admin?: string | null
+          hours_remaining?: number
+          id?: string
+          last_extended_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          userbot_id: string
+        }
+        Update: {
+          created_at?: string
+          days_remaining?: number
+          expiry_date?: string
+          extended_by_admin?: string | null
+          hours_remaining?: number
+          id?: string
+          last_extended_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          userbot_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

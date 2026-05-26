@@ -664,13 +664,14 @@ export const initiateMessageForwarding = createServerFn({ method: "POST" })
       // Update forward_events records with failure status
       const failureIds = eventRecords.map((e) => e.id);
       if (failureIds.length > 0) {
-        await supabaseAdmin
-          .from("forward_events")
-          .update({ status: "failed" })
-          .in("id", failureIds)
-          .catch((err) => {
-            console.error(`[ForwardBridge] Could not update failure status:`, err.message);
-          });
+        try {
+          await supabaseAdmin
+            .from("forward_events")
+            .update({ status: "failed" })
+            .in("id", failureIds);
+        } catch (err) {
+          console.error(`[ForwardBridge] Could not update failure status:`, (err as Error).message);
+        }
       }
 
       throw new Error(
@@ -974,11 +975,14 @@ export const checkTrialStatus = createServerFn({ method: "POST" })
 
     if (isExpired && trial.status === "active") {
       // Mark as expired in DB
-      await supabaseAdmin
-        .from("trial_grants")
-        .update({ status: "expired" })
-        .eq("id", trial.id)
-        .catch((err) => console.warn("Could not update trial status:", err));
+      try {
+        await supabaseAdmin
+          .from("trial_grants")
+          .update({ status: "expired" })
+          .eq("id", trial.id);
+      } catch (err) {
+        console.warn("Could not update trial status:", (err as Error).message);
+      }
     }
 
     const hoursRemaining = Math.max(0, (expiryMs - now) / (1000 * 60 * 60));
@@ -1133,4 +1137,137 @@ export const checkUserbotSubscription = createServerFn({ method: "POST" })
       hours_remaining: Math.max(0, (expiryMs - now) / (1000 * 60 * 60)),
       is_expired: isExpired,
     };
+  });
+
+/* ============================================================
+ * PRODUCT MANAGEMENT
+ * ============================================================ */
+
+/**
+ * Retrieves all active products from the database, ordered by sort_order.
+ * Used by the store page to display available products.
+ */
+export const getProducts = createServerFn({ method: "POST" })
+  .inputValidator((d) => InitDataInput.parse(d))
+  .handler(async ({ data }) => {
+    const user = await authenticate(data.initData);
+
+    const { data: products, error } = await supabaseAdmin
+      .from("products")
+      .select("id, title, description, category, price, stock, icon, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      console.error("[Products] Failed to fetch products:", error.message);
+      throw new Error(`Failed to fetch products: ${error.message}`);
+    }
+
+    return { products: products ?? [] };
+  });
+
+/**
+ * Updates a product's price and/or stock (admin only).
+ * Used by the store's admin edit mode.
+ */
+export const updateProduct = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        initData: z.string().min(1),
+        product_id: z.string().uuid(),
+        price: z.number().positive().optional(),
+        stock: z.number().int().min(0).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.initData);
+
+    const updateData: { price?: number; stock?: number } = {};
+    if (data.price !== undefined) updateData.price = data.price;
+    if (data.stock !== undefined) updateData.stock = data.stock;
+
+    if (Object.keys(updateData).length === 0) {
+      throw new Error("Must provide at least price or stock to update");
+    }
+
+    const { error } = await supabaseAdmin
+      .from("products")
+      .update(updateData)
+      .eq("id", data.product_id);
+
+    if (error) throw new Error(error.message);
+
+    return { updated: true, product_id: data.product_id, ...updateData };
+  });
+
+/**
+ * Adds a new product (admin only).
+ * Used by the store's admin mode to create new products.
+ */
+export const addProduct = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        initData: z.string().min(1),
+        title: z.string().min(1).max(255),
+        description: z.string().optional(),
+        category: z.enum(["premium", "gaming", "software"]).default("software"),
+        price: z.number().positive(),
+        stock: z.number().int().min(0).default(0),
+        icon: z.string().default("Sparkles"),
+        sort_order: z.number().int().default(0),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.initData);
+
+    const { data: product, error } = await supabaseAdmin
+      .from("products")
+      .insert({
+        title: data.title,
+        description: data.description ?? null,
+        category: data.category,
+        price: data.price,
+        stock: data.stock,
+        icon: data.icon,
+        sort_order: data.sort_order,
+        is_active: true,
+      })
+      .select("id, title, description, category, price, stock, icon, sort_order")
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    console.log(`[Products] Admin added new product: ${product.title} (${product.id})`);
+    return { created: true, product };
+  });
+
+/**
+ * Deletes a product (admin only).
+ * Used by the store's admin mode to remove products.
+ */
+export const deleteProduct = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        initData: z.string().min(1),
+        product_id: z.string().uuid(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin(data.initData);
+
+    const { error } = await supabaseAdmin
+      .from("products")
+      .delete()
+      .eq("id", data.product_id);
+
+    if (error) throw new Error(error.message);
+
+    console.log(`[Products] Admin deleted product: ${data.product_id}`);
+    return { deleted: true, product_id: data.product_id };
   });
