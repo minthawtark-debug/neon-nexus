@@ -194,7 +194,7 @@ function ForwardPage() {
             value={source} 
             onChange={(e) => setSource(e.target.value)} 
             placeholder="@channel or t.me/link"
-            disabled={activeJobId}
+            disabled={!!activeJobId}
             className={`w-full rounded-lg border bg-[rgba(13,14,18,0.7)] px-3 py-2.5 font-mono text-sm text-foreground focus:outline-none focus:ring-2 disabled:opacity-50 ${sourceValid ? "border-[rgba(0,240,255,0.25)] focus:border-[var(--neon-cyan)] focus:ring-[rgba(0,240,255,0.3)]" : "border-red-500/50 focus:border-red-400 focus:ring-red-500/30"}`} 
           />
           {!sourceValid && (
@@ -229,7 +229,7 @@ function ForwardPage() {
             onChange={(e) => setNewTarget(e.target.value)} 
             onKeyDown={(e) => e.key === "Enter" && addTarget()} 
             placeholder="Add target ID / link"
-            disabled={activeJobId}
+            disabled={!!activeJobId}
             className={`flex-1 rounded-lg border bg-[rgba(13,14,18,0.7)] px-3 py-2.5 font-mono text-sm text-foreground focus:outline-none disabled:opacity-50 ${newTargetValid ? "border-[rgba(157,0,255,0.3)] focus:border-[var(--neon-purple)]" : "border-red-500/50 focus:border-red-400"}`} 
           />
           <button 

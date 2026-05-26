@@ -1,11 +1,15 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-// Minimal standard Vite config for React + TypeScript
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [
+    tanstackStart(),
+    tsconfigPaths(),
+  ],
   server: {
-    port: 5173,
+    port: 5000,
+    host: "0.0.0.0",
+    allowedHosts: true,
   },
 });

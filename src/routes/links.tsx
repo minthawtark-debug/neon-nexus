@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Shell, PageHeader } from "@/components/Shell";
 import { Newspaper, TrendingUp, DollarSign, Zap, ExternalLink } from "lucide-react";
 
-export const Route = createFileRoute("/news")({ component: NewsPage });
+export const Route = createFileRoute("/links")({ component: NewsPage });
 
 interface NewsItem {
   id: string;
@@ -12,7 +12,7 @@ interface NewsItem {
   source: string;
   url: string;
   timestamp: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }
 
 const telegramNews: NewsItem[] = [
